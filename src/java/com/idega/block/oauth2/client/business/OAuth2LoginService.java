@@ -83,11 +83,18 @@
 package com.idega.block.oauth2.client.business;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.Date;
 
 import org.apache.oltu.oauth2.client.response.OAuthAccessTokenResponse;
 
+import com.idega.block.oauth2.client.OAuth2LoginConstants;
+import com.idega.block.oauth2.client.data.OAuth2CredentialEntity;
+import com.idega.user.data.User;
+
 /**
- * <p>TODO</p>
+ * <p>Service for logging in external services like facebook.com, google,
+ * github or etc., which support OAuth2 specification.</p>
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *
@@ -100,30 +107,123 @@ public interface OAuth2LoginService {
 	
 	/**
 	 * 
-	 * <p>TODO</p>
+	 * <p>TODO Not working correctly yet</p>
 	 * @param endpointURL
 	 * @param clientId
-	 * @param clientSecret
-	 * @param redirectURL
 	 * @param responseType
 	 * @return
 	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
 	 */
-	public String getAccessToken(URI endpointURL, String clientId,
-			String clientSecret, URI redirectURL,
+	public String getAccessToken(URI endpointURL, 
+			URI redirectURL, String applicationId, String applicationSecret,
 			Class<? extends OAuthAccessTokenResponse> responseType);
 
 	/**
 	 * 
-	 * <p>TODO</p>
+	 * <p>TODO Not working correctly yet</p>
 	 * @param endpointURL
-	 * @param clientId
-	 * @param clientSecret
+	 * @param applicationId
 	 * @param redirectURL
+	 * @param applicationSecret TODO
 	 * @return
 	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
 	 */
-	public URI getAuthorizationPageURI(URI endpointURL, String clientId,
-			String clientSecret, URI redirectURL);
+	public URI getAuthorizationPageURI(URI endpointURL,
+			URI redirectURL, String applicationId, String applicationSecret);
+	
+	/**
+	 * 
+	 * @param email of {@link User} to find, not <code>null</code>;
+	 * @return first occurrence of {@link User}, who has given e-mail or 
+	 * <code>null</code> on failure; 
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public com.idega.user.data.User getUser(String email);
 
+	/**
+	 * 
+	 * @param email to search idega {@link User}s by, not <code>null</code>;
+	 * @return user, who has given e-mail or <code>null</code> on failure;
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public Collection<User> getUsers(String email);
+
+	/**
+	 * 
+	 * <p>Checks if {@link User} by given service user id is registered in 
+	 * database.</p>
+	 * @param userServiceId to search records for, not <code>null</code>;
+	 * @param serviceName it is google, facebook or etc., not <code>null</code>;
+	 * @return external {@link User} registered in idega system or 
+	 * <code>null</code> if external user not registered yet. 
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public User getUser(String userServiceId, String serviceName);
+
+	/**
+	 * 
+	 * <p>Updates or persists OAuth 2.0 login data for {@link User}, 
+	 * who has given email or will create new Idega {@link User} by data found 
+	 * in service.</p>
+	 * @param userServiceId is {@link User} id in selected service, 
+	 * not <code>null</code>;
+	 * @param serviceName is name of service, 
+	 * defined in {@link OAuth2LoginConstants},
+	 * for example: "google, facebook", not <code>null</code>;
+	 * @param email which is user in service and locally;
+	 * @param firstName is {@link User#getFirstName()};
+	 * @param middleName is {@link User#getMiddleName()};
+	 * @param lastName is {@link User#getLastName()};
+	 * @param displayname is {@link User#getDisplayName()};
+	 * @param description is {@link User#getDescription()};
+	 * @param gender is {@link User#getGender()};
+	 * @param dateOfBirth is data, when user was born;
+	 * @param fullName is {@link User#getName()};
+	 * @param accessToken is code for accessing data of {@link User}
+	 * in selected service;
+	 * @param refreshToken is code for refreshing accessToken;
+	 * @param expiresIn is time when accessToke will expire;
+	 * @return updated/persisted Idega {@link User} or <code>null</code>
+	 * on failure;
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public User update(String userServiceId, String serviceName, String email,
+			String firstName, String middleName, String lastName,
+			String displayname, String description, Integer gender,
+			Date dateOfBirth, String fullName, String accessToken, String refreshToken, Long expiresIn);
+
+	/**
+	 * 
+	 * <p>Tries to login {@link User}, if registered in 
+	 * {@link OAuth2CredentialEntity}.</p>
+	 * @param serviceUserId is user id in external system, for example, 
+	 * facebook.com id. It is not your email, it is id, 
+	 * which facebook.com generated! Not <code>null</code>;
+	 * @param serviceName is name on {@link OAuth2LoginConstants}, 
+	 * for example: "facebook", not <code>null</code>;
+	 * @return true if {@link User} logged in, <code>false</code> 
+	 * otherwise.
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public boolean login(String serviceUserId, String serviceName);
+
+	/**
+	 * 
+	 * <p>Tries to login {@link User}, if registered in 
+	 * {@link OAuth2CredentialEntity}.</p>
+	 * @param serviceUserId is user id in external system, for example, 
+	 * facebook.com id. It is not your email, it is id, 
+	 * which facebook.com generated! Not <code>null</code>;
+	 * @param serviceName is name on {@link OAuth2LoginConstants}, 
+	 * for example: "facebook", not <code>null</code>;
+	 * @param accessToken it is key, that service provider given to access
+	 * provided services;
+	 * @param refreshToken it is key for getting new access token;
+	 * @param expiresIn it is time in which access token expires;
+	 * @return <code>true</code> when logged in to Idega system, 
+	 * <code>false</code> otherwise;
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public boolean login(String serviceUserId, String serviceName, String accessToken,
+			String refreshToken, Long expiresIn);
 }

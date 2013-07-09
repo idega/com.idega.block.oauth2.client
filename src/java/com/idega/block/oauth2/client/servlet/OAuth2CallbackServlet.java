@@ -84,7 +84,6 @@ package com.idega.block.oauth2.client.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.logging.Level;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -95,7 +94,8 @@ import org.apache.oltu.oauth2.client.response.OAuthAuthzResponse;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 
 /**
- * <p>TODO</p>
+ * <p>This servlet should catch response from OAuth2.0 server. Response should
+ * have access token, refresh token and expiration time.</p>
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *
@@ -104,9 +104,6 @@ import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
  */
 public class OAuth2CallbackServlet extends HttpServlet {
 
-	/**
-	 * <p>TODO</p>
-	 */
 	private static final long serialVersionUID = 4035501434868024406L;
 
 	@Override
@@ -116,15 +113,20 @@ public class OAuth2CallbackServlet extends HttpServlet {
         try {
 			oar = OAuthAuthzResponse.oauthCodeAuthzResponse(req);
 		} catch (OAuthProblemException e) {
-			java.util.logging.Logger.getLogger(getClass().getName()).log(Level.WARNING, "", e);
+			log("Failed to get response from service located in: " + req.getRequestURI());
 		}
-        
+
         PrintWriter out = resp.getWriter();
 		out.println("<html>");
 		out.println("<head>");
 		out.println("</head>");
 		out.println("<body>");
-		out.println("<p>Response from facebook: </p>");
+		out.println("<p>");
+		out.println("From: ");
+		out.println(oar.getRequest().getRequestURI());
+		out.println(". You got accesss token: ");
+		out.println(oar.getAccessToken());
+		out.println("</p>");
 		out.println("</body>");
 		out.println("</html>");
 	}

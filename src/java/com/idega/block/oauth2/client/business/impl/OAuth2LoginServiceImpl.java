@@ -83,25 +83,44 @@
 package com.idega.block.oauth2.client.business.impl;
 
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
 import java.util.logging.Level;
 
 import org.apache.oltu.oauth2.client.OAuthClient;
 import org.apache.oltu.oauth2.client.URLConnectionClient;
 import org.apache.oltu.oauth2.client.request.OAuthClientRequest;
-import org.apache.oltu.oauth2.client.response.GitHubTokenResponse;
 import org.apache.oltu.oauth2.client.response.OAuthAccessTokenResponse;
-import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
+import com.idega.block.oauth2.client.OAuth2LoginConstants;
 import com.idega.block.oauth2.client.business.OAuth2LoginService;
+import com.idega.block.oauth2.client.data.OAuth2CredentialEntity;
+import com.idega.block.oauth2.client.data.dao.OAuth2CredentialEntityDAO;
+import com.idega.business.IBOLookup;
+import com.idega.business.IBOLookupException;
+import com.idega.core.accesscontrol.business.LoginBusinessBean;
 import com.idega.core.business.DefaultSpringBean;
+import com.idega.presentation.IWContext;
+import com.idega.user.bean.UserDataBean;
+import com.idega.user.business.UserApplicationEngine;
+import com.idega.user.business.UserBusiness;
+import com.idega.user.data.Group;
+import com.idega.user.data.User;
+import com.idega.util.CoreUtil;
+import com.idega.util.ListUtil;
+import com.idega.util.StringUtil;
+import com.idega.util.expression.ELUtil;
 
 /**
- * <p>TODO</p>
+ * @see OAuth2LoginService
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *
@@ -113,48 +132,294 @@ import com.idega.core.business.DefaultSpringBean;
 public class OAuth2LoginServiceImpl extends DefaultSpringBean implements
 		OAuth2LoginService {
 
+	private com.idega.user.business.UserBusiness userBusiness = null;
+
+	@Autowired
+	private OAuth2UsersGroupBean oAuth2UsersGroupBean;
+	
+	private UserApplicationEngine userApplicationEngine;
+	
+	@Autowired
+	private OAuth2CredentialEntityDAO oAuth2CredentialEntityDAO;
+	
 	@Override
-	public URI getAuthorizationPageURI(URI endpointURL, String clientId, 
-			String clientSecret, URI redirectURL) {
-		getAccessToken(endpointURL, clientId, clientSecret, redirectURL, 
-				GitHubTokenResponse.class);
+	public URI getAuthorizationPageURI(URI endpointURL, URI redirectURL, 
+			String applicationId, String applicationSecret) {
+		OAuthClientRequest request = getAuthorizationRequest(endpointURL, 
+				redirectURL, applicationId, applicationSecret);
+		if (request == null) {
+			return null;
+		}
+		
+		try {
+			return new URI(request.getLocationUri());
+		} catch (URISyntaxException e) {
+			getLogger().log(Level.WARNING, "Failed to form URI from: " + request.getLocationUri());
+		}
+		
+		return null;
+	}
+	
+	public OAuthClientRequest getAuthorizationRequest(URI endpointURL, 
+			URI redirectURL, String applicationId, String applicationSecret) {
+		OAuthClientRequest request = null;
+		try {
+			request = OAuthClientRequest
+			        .tokenLocation(endpointURL.toString())
+			        .setClientId(applicationId)
+			        .setRedirectURI(OAuth2LoginConstants.REDIRECT_URI)
+			        .setGrantType(GrantType.AUTHORIZATION_CODE)
+			        .buildBodyMessage();
+		} catch (OAuthSystemException e) {
+			getLogger().log(Level.WARNING, "Failed to create request for " +
+					"OAuth 2.0 login, cause of: ", e);
+		}
+		
+		return request;
+	}
+	
+	public OAuthAccessTokenResponse getOAuthAccessTokenResponse(URI endpointURL, 
+			URI redirectURL, String applicationId, String applicationSecret,
+			Class<? extends OAuthAccessTokenResponse> responseType) {
+		OAuthClientRequest request = getAuthorizationRequest(endpointURL, 
+				redirectURL, applicationId, applicationSecret);
+		if (request == null) {
+			return null;
+		}
+		
+		OAuthClient client = new OAuthClient(new URLConnectionClient());
+		
+		try {
+			return client.accessToken(request, responseType);
+		} catch (Exception e) {
+			getLogger().log(Level.WARNING, "Failed to get access token from " +
+					"server " + endpointURL.toString() + " cause of: " , e);
+		}
 		
 		return null;
 	}
 	
 	@Override
-	public String getAccessToken(URI endpointURL, String clientId, 
-			String clientSecret, URI redirectURL, 
+	public String getAccessToken(URI endpointURL, 
+			URI redirectURL, String applicationId, String applicationSecret,
 			Class<? extends OAuthAccessTokenResponse> responseType) {
 		
-		OAuthClientRequest request = null;
-		try {
-			request = OAuthClientRequest
-			        .tokenLocation(endpointURL.toString())
-			        .setClientId(clientId)
-			        .setRedirectURI(redirectURL.toString())
-			        .setGrantType(GrantType.AUTHORIZATION_CODE)
-			        .buildBodyMessage();
-		} catch (OAuthSystemException e) {
-			java.util.logging.Logger.getLogger(getClass().getName()).log(Level.WARNING, "", e);
-		}
-		
-		OAuthClient client = new OAuthClient(new URLConnectionClient());
-		
-		OAuthAccessTokenResponse oauthResponse = null;
-		try {
-			oauthResponse = client.accessToken(request, responseType);
-		} catch (OAuthSystemException e) {
-			java.util.logging.Logger.getLogger(getClass().getName()).log(Level.WARNING, "", e);
-		} catch (OAuthProblemException e) {
-			java.util.logging.Logger.getLogger(getClass().getName()).log(Level.WARNING, "", e);
-		}
-		
+		OAuthAccessTokenResponse oauthResponse = getOAuthAccessTokenResponse(
+				endpointURL, redirectURL, applicationId, applicationSecret, responseType);
 		if (oauthResponse == null) {
 			return null;
 		}
 		
         return oauthResponse.getAccessToken();
 	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.idega.block.oauth2.client.business.OAuth2LoginService#update(java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.Integer, java.util.Date, java.lang.String)
+	 */
+	@Override
+	public User update(String serviceUserId, String serviceName,
+			String email, String firstName, String middleName, 
+			String lastName, String displayname, String description, 
+			Integer gender, Date dateOfBirth, String fullName, 
+			String accessToken, String refreshToken, Long expiresIn) {
+		
+		User user = null;
+		
+		// Searching if external user already registered or user with given mail
+		OAuth2CredentialEntity credentialEntity = getOAuth2CredentialEntityDAO()
+				.findByServiceUserIdAndProvider(serviceUserId, serviceName);
+		if (credentialEntity != null) {
+			user = credentialEntity.getIdegaUser();
+		} else {
+			user = getUser(email);
+		}
 
+		// Creating user, if does not exits
+		if (user == null && !StringUtil.isEmpty(email)) {
+			UserDataBean userData = new UserDataBean();
+			userData.setAccountEnabled(Boolean.TRUE);
+			userData.setAccountExists(Boolean.TRUE);
+			userData.setName(fullName);
+			userData.setEmail(email);
+			userData.setChangePasswordNextTime(Boolean.TRUE);
+			userData.setJuridicalPerson(Boolean.FALSE);
+			
+			Group oauth2Group = getOAuth2UsersGroupBean().getGroup();
+			getUserApplicationEngine().createUser(userData, 
+					Integer.valueOf(oauth2Group.getId()), 
+					new ArrayList<Integer>(), null, Boolean.FALSE, Boolean.TRUE, 
+					email, null);
+		}
+
+		if (user == null) {
+			return null;
+		}
+		
+		credentialEntity = getOAuth2CredentialEntityDAO().update(
+				credentialEntity != null ? credentialEntity.getId() : null, 
+				expiresIn, refreshToken, accessToken, 
+				user, serviceUserId, serviceName);
+		if (credentialEntity == null || credentialEntity.getId() == null) {
+			getLogger().warning("Failed to update credentials of idega user!");
+			return null;
+		}
+
+		return user;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.idega.block.oauth2.client.business.OAuth2LoginService#login(java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public boolean login(String serviceUserId, String serviceName, 
+			String accessToken, String refreshToken, Long expiresIn) {
+		if (StringUtil.isEmpty(serviceName) || StringUtil.isEmpty(serviceUserId)) {
+			return Boolean.FALSE;
+		}
+		
+		/* We need update tokens and expiration time! 
+		 * Works only with existing ones.*/
+		OAuth2CredentialEntity credentialEntity = getOAuth2CredentialEntityDAO()
+				.update(null, expiresIn, refreshToken, accessToken, null, serviceUserId, serviceName);
+		if (credentialEntity == null) {
+			return Boolean.FALSE;
+		}
+		
+		return login(credentialEntity.getIdegaUser());
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.idega.block.oauth2.client.business.OAuth2LoginService#login(java.lang.String, java.lang.String)
+	 */
+	@Override
+	public boolean login(String serviceUserId, String serviceName) {
+		return login(serviceUserId, serviceName, null, null, null);
+	}
+	
+	/**
+	 * 
+	 * <p>Tries to login {@link User} to Idega system.</p>
+	 * @param user to login, not <code>null</code>;
+	 * @return <code>true</code> if user logged in, <code>false</code>
+	 * otherwise.
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	protected boolean login(User user) {
+		if (user == null) {
+			return Boolean.FALSE;
+		}
+		
+		IWContext iwc = CoreUtil.getIWContext();
+		if (iwc == null) {
+			return Boolean.FALSE;
+		}
+		
+		// XXX: What bad this could do? 
+		if (iwc.isLoggedOn()) {
+			return Boolean.TRUE;
+		}
+		
+		try {
+			LoginBusinessBean.getDefaultLoginBusinessBean().logInUser(iwc, user);
+		} catch (Exception e) {
+			getLogger().log(Level.WARNING, "Failed to login, cause of: ", e);
+			return Boolean.FALSE;
+		}
+		
+		return Boolean.TRUE;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.idega.block.oauth2.client.business.OAuth2LoginService#getUserByServiceId(java.lang.String)
+	 */
+	@Override
+	public User getUser(String userServiceId, String serviceName) {
+		if (StringUtil.isEmpty(userServiceId) || StringUtil.isEmpty(serviceName)) {
+			return null;
+		}
+		
+		OAuth2CredentialEntity credential = getOAuth2CredentialEntityDAO()
+				.findByServiceUserIdAndProvider(userServiceId, serviceName);
+		if (credential == null) {
+			return null;
+		}
+		
+		return credential.getIdegaUser();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.idega.mobile.business.ExternalLoginService#getIdegaUser(java.lang.String, java.lang.String)
+	 */
+	@Override
+	public User getUser(String email) {
+		if (StringUtil.isEmpty(email)) {
+			return null;
+		}
+		
+		Collection<com.idega.user.data.User> users = getUsers(email);
+		if (ListUtil.isEmpty(users)) {
+			return null;
+		}
+
+		return users.iterator().next();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.idega.block.oauth2.client.business.OAuth2LoginService#getUsers(java.lang.String)
+	 */
+	@Override
+	public Collection<User> getUsers(String email) {
+		if (StringUtil.isEmpty(email)) {
+			return null;
+		}
+		
+		return getUserBusiness().getUsersByEmail(email);
+	}
+	
+	protected com.idega.user.business.UserBusiness getUserBusiness() {
+		if (this.userBusiness != null) {
+			return this.userBusiness;
+		}
+		
+		try {
+			this.userBusiness = IBOLookup.getServiceInstance(
+					CoreUtil.getIWContext(), UserBusiness.class);
+		} catch (IBOLookupException e) {
+			getLogger().log(Level.WARNING, 
+					"Failed to get " + UserBusiness.class + ", cause of: ", e);
+		}
+		
+		return this.userBusiness;
+	}
+	
+	protected OAuth2CredentialEntityDAO getOAuth2CredentialEntityDAO() {
+		if (this.oAuth2CredentialEntityDAO == null) {
+			ELUtil.getInstance().autowire(this);
+		}
+		
+		return this.oAuth2CredentialEntityDAO;
+	}
+	
+	protected UserApplicationEngine getUserApplicationEngine() {
+		if (this.userApplicationEngine == null) {
+			this.userApplicationEngine = ELUtil.getInstance()
+					.getBean(UserApplicationEngine.class);
+		}
+		
+		return this.userApplicationEngine;
+	}
+	
+	protected OAuth2UsersGroupBean getOAuth2UsersGroupBean() {
+		if (this.oAuth2UsersGroupBean == null) {
+			ELUtil.getInstance().autowire(this);
+		}
+		
+		return this.oAuth2UsersGroupBean;
+	}
 }

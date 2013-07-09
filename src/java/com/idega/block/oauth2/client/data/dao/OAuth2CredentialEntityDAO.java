@@ -1,5 +1,5 @@
 /**
- * @(#)ExternalLoginService.java    1.0.0 2:27:55 PM
+ * @(#)GoogleCredentialEntityDAO.java    1.0.0 11:21:49 AM
  *
  * Idega Software hf. Source Code Licence Agreement x
  *
@@ -80,68 +80,105 @@
  *     License that was purchased to become eligible to receive the Source 
  *     Code after Licensee receives the source code. 
  */
-package com.idega.block.oauth2.client.business;
+package com.idega.block.oauth2.client.data.dao;
 
-import com.restfb.types.User;
+import java.util.Collections;
+import java.util.List;
 
-
-
+import com.idega.block.oauth2.client.OAuth2LoginConstants;
+import com.idega.block.oauth2.client.data.OAuth2CredentialEntity;
+import com.idega.core.persistence.GenericDao;
+import com.idega.user.data.User;
 
 /**
- * <p>Interface is used for logging in external services like
- * facebook.com, bank or etc.</p>
+ * <p>Data access object for {@link OAuth2CredentialEntity}.</p>
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *
- * @version 1.0.0 Jun 20, 2013
+ * @version 1.0.0 Jun 25, 2013
  * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
  */
-public interface FacebookLoginService {
-
-	public static final String BEAN_NAME = "externalLoginService"; 
+public interface OAuth2CredentialEntityDAO extends GenericDao, com.google.api.client.auth.oauth2.CredentialStore {
 	
-	/**
-	 * 
-	 * <p>Method to login to facebook.com</p>
-	 * @param email is account id of facebook.com, not <code>null</code>;
-	 * @param password is password of account in facebook.com, 
-	 * not <code>null</code>;
-	 * @return user data from facebook.com or <code>null</code> on failure;
-	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
-	 */
-	public User loginToFacebook(String email, String password);
-	
-	/**
-	 * 
-	 * <p>Logins to facebook.com, if successful, searcher same 
-	 * {@link com.idega.user.data.User} in Idega ePlatform, if does not find,
-	 * creates it and log in.</p>
-	 * @param email is account id of facebook.com, not <code>null</code>;
-	 * @param password is password of account in facebook.com, 
-	 * not <code>null</code>;
-	 * @return logged in user or <code>null</code> on failure;
-	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
-	 */
-	public com.idega.user.data.User getIdegaUser(String email, String password);
+	public static final String BEAN_NAME = "credentialEntityDAO";
 
 	/**
 	 * 
-	 * <p>Searches for the same user in Idega system by email.</p>
-	 * @param facebookUser to search for, not <code>null</code>;
-	 * @return corresponding Idega {@link com.idega.user.data.User} or 
-	 * <code>null</code> on failure.
+	 * @return all {@link OAuth2CredentialEntity}s from data source or 
+	 * {@link Collections#emptyList()} on failure; 
 	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
 	 */
-	public com.idega.user.data.User getIdegaUser(User facebookUser);
+	public List<OAuth2CredentialEntity> findAll();
 
 	/**
 	 * 
-	 * <p>Logins {@link com.idega.user.data.User} </p>
-	 * @param email which used to login to facebook.com, not <code>null</code;
-	 * @param password which used to login to facebook.com, not <code>null</code;
-	 * @return logged in idega user or <code>null</code> on failure;
+	 * @param id is {@link OAuth2CredentialEntity#getId()}, not <code>null</code>;
+	 * @return {@link OAuth2CredentialEntity} by given id or <code>null</code>
+	 * on failure;
 	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
 	 */
-	public com.idega.user.data.User loginByFacebookAccount(String email,
-			String password);
+	public OAuth2CredentialEntity findById(Long id);
+
+	/**
+	 * 
+	 * <p>Updates or creates {@link OAuth2CredentialEntity} in data source of 
+	 * current system.</p>
+	 * @param entity to create or update, not <code>null</code>;
+	 * @return created or updated entity or <code>null</code> on failure;
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public OAuth2CredentialEntity update(OAuth2CredentialEntity entity);
+
+	/**
+	 * 
+	 * <p>Creates or updates {@link OAuth2CredentialEntity} in local data source
+	 * </p>
+	 * @param id of entity to update, if <code>null</code>, then new one will
+	 * be created if serviceUserId and serviceProviderName not provided;
+	 * @param expirationTimeMillis is time, when given token expires;
+	 * @param refreshToken is token to get new access token;
+	 * @param accessToken is number to access services in external service;
+	 * @param user who could access service, not <code>null</code>;
+	 * @param serviceUserId is user id in external service, not <code>null</code>;
+	 * @param serviceProviderName is service provider name, 
+	 * for example google or facebook, not <code>null</code>;
+	 * @return updated or created entity or <code>null</code> on failure;
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public OAuth2CredentialEntity update(Long id, Long expirationTimeMillis,
+			String refreshToken, String accessToken, User user,
+			String serviceUserId, String serviceProviderName);
+
+	/**
+	 * 
+	 * @param obj to remove, not <code>null</code>;
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public void remove(OAuth2CredentialEntity obj);
+
+	/**
+	 * 
+	 * <p>Searches for data about users in local data source</p>
+	 * @param id is user id from facebook.com, google, etc., not <code>null</code>;
+	 * @return entities, matching required user id of service or 
+	 * {@link Collections#emptyList()} on failure;
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public List<OAuth2CredentialEntity> findByServiceUserId(String id);
+
+	/**
+	 * 
+	 * <p>Find unique credential entity by service provider name and user
+	 * id in that service.</p>
+	 * @param id is given user id in some kind of service, 
+	 * for example: "54244565654..."
+	 * in facebook.com, not <code>null</code>;
+	 * @param provider is one of providers, written in 
+	 * {@link OAuth2LoginConstants}, not <code>null</code>;
+	 * @return entity with data about user credentials in that service or 
+	 * <code>null</code> on failure;
+	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
+	 */
+	public OAuth2CredentialEntity findByServiceUserIdAndProvider(String id,
+			String provider);
 }

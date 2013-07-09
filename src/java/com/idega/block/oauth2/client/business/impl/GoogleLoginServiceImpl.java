@@ -118,7 +118,7 @@ import com.google.api.services.oauth2.Oauth2;
 import com.google.api.services.oauth2.model.Tokeninfo;
 import com.google.api.services.oauth2.model.Userinfo;
 import com.idega.block.oauth2.client.business.GoogleLoginService;
-import com.idega.block.oauth2.client.data.dao.GoogleCredentialEntityDAO;
+import com.idega.block.oauth2.client.data.dao.OAuth2CredentialEntityDAO;
 import com.idega.core.business.DefaultSpringBean;
 import com.idega.core.file.util.MimeTypeUtil;
 import com.idega.util.CoreConstants;
@@ -153,7 +153,7 @@ public class GoogleLoginServiceImpl extends DefaultSpringBean implements
 			"https://www.googleapis.com/auth/userinfo.profile",
 			"https://www.googleapis.com/auth/userinfo.email");
 	
-	private GoogleCredentialEntityDAO googleCredentialEntityDAO;
+	private OAuth2CredentialEntityDAO googleCredentialEntityDAO;
 	
 	public Details getDetails(String clientId, String clientSecret) {
 		Details details = new Details();
@@ -384,7 +384,7 @@ public class GoogleLoginServiceImpl extends DefaultSpringBean implements
 		System.out.println(userinfo.toPrettyString());
 	}
 
-	protected GoogleCredentialEntityDAO getGoogleCredentialEntityDAO() {
+	protected OAuth2CredentialEntityDAO getGoogleCredentialEntityDAO() {
 		if (this.googleCredentialEntityDAO == null) {
 			ELUtil.getInstance().autowire(this);
 		}

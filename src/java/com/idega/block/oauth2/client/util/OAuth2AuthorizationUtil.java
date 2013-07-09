@@ -84,7 +84,7 @@ package com.idega.block.oauth2.client.util;
 
 
 /**
- * <p>TODO</p>
+ * <p>Contains helper methods</p>
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *

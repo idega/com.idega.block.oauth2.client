@@ -87,18 +87,21 @@ import java.net.URISyntaxException;
 import java.util.logging.Level;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
-import com.idega.block.login.IWBundleStarter;
 import com.idega.block.oauth2.client.OAuth2LoginConstants;
 import com.idega.block.oauth2.client.business.OAuth2LoginService;
+import com.idega.idegaweb.IWMainApplication;
+import com.idega.idegaweb.IWMainApplicationSettings;
 import com.idega.presentation.Block;
 import com.idega.presentation.IWContext;
 import com.idega.presentation.Image;
 import com.idega.presentation.ui.Form;
+import com.idega.util.StringUtil;
 import com.idega.util.expression.ELUtil;
 
 /**
- * <p>TODO</p>
+ * <p>Presentation component for logging in external services!</p>
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *
@@ -107,9 +110,8 @@ import com.idega.util.expression.ELUtil;
  */
 public class OAuth2Login extends Block {
 	
-	public static final String FACEBOOK_LOGIN_IMAGE = "images/loginWithFacebook.png";
-	
 	@Autowired
+	@Qualifier(OAuth2LoginService.BEAN_NAME)
 	private com.idega.block.oauth2.client.business.OAuth2LoginService oAuth2LoginService;
 	
 	@Override
@@ -119,14 +121,14 @@ public class OAuth2Login extends Block {
 		
 		form.add(getFacebookLoginImage(iwc));
 	}
-	
+
 	protected Image getFacebookLoginImage(IWContext iwc) {
 		if (iwc == null) {
 			return null;
 		}
 		
 		Image facebookLoginImage = new Image(
-				getBundle(iwc).getVirtualPathWithFileNameString(FACEBOOK_LOGIN_IMAGE),
+				getBundle(iwc).getVirtualPathWithFileNameString(OAuth2LoginConstants.FACEBOOK_LOGIN_IMAGE),
 				getLocalizedString("login_to_facebook", "Login to Facebook", iwc));
 		facebookLoginImage.setStyleClass("facebookLoginClass");
 		
@@ -134,11 +136,13 @@ public class OAuth2Login extends Block {
 		try {
 			authorizationPageURI = getOAuth2LoginService().getAuthorizationPageURI(
 					new URI(OAuth2LoginConstants.FACEBOOK_AUTHZ), 
-					"553968734645138", 
-					"27bf7f6214299afdba0275f96ac8b19b", 
-					new URI(OAuth2LoginConstants.REDIRECT_URI));
+					new URI(OAuth2LoginConstants.REDIRECT_URI),
+					getApplicationProperty(iwc, 
+							OAuth2LoginConstants.FACEBOOK_APPLICATION_ID_PROPERTY, 
+							"124693474406865"), null);
 		} catch (URISyntaxException e) {
-			java.util.logging.Logger.getLogger(getClass().getName()).log(Level.WARNING, "", e);
+			java.util.logging.Logger.getLogger(getClass().getName()).log(
+					Level.WARNING, "Failed to form URI for Facebook login.");
 		}
 		
 		if (authorizationPageURI != null) {
@@ -150,7 +154,37 @@ public class OAuth2Login extends Block {
 	
 	@Override
 	public String getBundleIdentifier() {
-		return IWBundleStarter.IW_BUNDLE_IDENTIFIER;
+		return OAuth2LoginConstants.IW_BUNDLE_IDENTIFIER;
+	}
+	
+	protected IWMainApplication getIWMainApplication(IWContext iwc) {
+		if (iwc == null) {
+			return null;
+		}
+		
+		return iwc.getIWMainApplication();
+	}
+	
+	protected IWMainApplicationSettings getIWMainApplicationSettings(IWContext iwc) {
+		IWMainApplication mainApplication = getIWMainApplication(iwc);
+		if (mainApplication == null) {
+			return null;
+		}
+		
+		return mainApplication.getSettings();
+	}
+	
+	protected String getApplicationProperty(IWContext iwc, String key, String value) {
+		if (iwc == null || StringUtil.isEmpty(key) || StringUtil.isEmpty(value)) {
+			return null;
+		}
+		
+		IWMainApplicationSettings settings = getIWMainApplicationSettings(iwc);
+		if (settings == null) {
+			return null;
+		}
+		
+		return settings.getProperty(key, value);
 	}
 	
 	protected OAuth2LoginService getOAuth2LoginService() {

@@ -91,36 +91,37 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.google.api.client.auth.oauth2.Credential;
-import com.idega.block.oauth2.client.data.GoogleCredentialEntity;
-import com.idega.block.oauth2.client.data.dao.GoogleCredentialEntityDAO;
+import com.idega.block.oauth2.client.OAuth2LoginConstants;
+import com.idega.block.oauth2.client.data.OAuth2CredentialEntity;
+import com.idega.block.oauth2.client.data.dao.OAuth2CredentialEntityDAO;
 import com.idega.core.persistence.Param;
 import com.idega.core.persistence.impl.GenericDaoImpl;
 import com.idega.user.data.User;
 import com.idega.util.StringUtil;
 
 /**
- * @see GoogleCredentialEntityDAO
+ * @see OAuth2CredentialEntityDAO
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *
  * @version 1.0.0 Jun 25, 2013
  * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
  */
-@Repository(GoogleCredentialEntityDAO.BEAN_NAME)
+@Repository(OAuth2CredentialEntityDAO.BEAN_NAME)
 @Transactional(readOnly = false)
 @Scope(BeanDefinition.SCOPE_SINGLETON)
-public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
-		GoogleCredentialEntityDAO {
+public class OAuth2CredentialEntityDAOImpl extends GenericDaoImpl implements
+		OAuth2CredentialEntityDAO {
 	
 	/*
 	 * (non-Javadoc)
 	 * @see com.idega.block.calendar.data.dao.GoogleCredentialEntityDAO#findAll()
 	 */
 	@Override
-	public List<GoogleCredentialEntity> findAll() {
+	public List<OAuth2CredentialEntity> findAll() {
 		return getResultList(
-				GoogleCredentialEntity.QUERY_FIND_ALL, 
-				GoogleCredentialEntity.class);
+				OAuth2CredentialEntity.QUERY_FIND_ALL, 
+				OAuth2CredentialEntity.class);
 	}
 
 	/*
@@ -128,10 +129,10 @@ public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
 	 * @see com.idega.block.calendar.data.dao.GoogleCredentialEntityDAO#findById(java.lang.Long)
 	 */
 	@Override
-	public GoogleCredentialEntity findById(Long id) {
-		return getSingleResult(GoogleCredentialEntity.QUERY_FIND_BY_ID, 
-				GoogleCredentialEntity.class, 
-				new Param(GoogleCredentialEntity.idProp, id));
+	public OAuth2CredentialEntity findById(Long id) {
+		return getSingleResult(OAuth2CredentialEntity.QUERY_FIND_BY_ID, 
+				OAuth2CredentialEntity.class, 
+				new Param(OAuth2CredentialEntity.idProp, id));
 	}
 	
 	/*
@@ -139,10 +140,23 @@ public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
 	 * @see com.idega.block.calendar.data.dao.GoogleCredentialEntityDAO#findByGoogleUserId(java.lang.String)
 	 */
 	@Override
-	public GoogleCredentialEntity findByGoogleUserId(String id) {
-		return getSingleResult(GoogleCredentialEntity.QUERY_FIND_BY_GOOGLE_USER_ID, 
-				GoogleCredentialEntity.class, 
-				new Param(GoogleCredentialEntity.googleUserIdProp, id));
+	public List<OAuth2CredentialEntity> findByServiceUserId(String id) {
+		return getResultList(OAuth2CredentialEntity.QUERY_FIND_BY_SERVICE_USER_ID, 
+				OAuth2CredentialEntity.class, 
+				new Param(OAuth2CredentialEntity.serviceUserIdProp, id));
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.idega.block.oauth2.client.data.dao.OAuth2CredentialEntityDAO#findByServiceUserIdAndProvider(java.lang.String, java.lang.String)
+	 */
+	@Override
+	public OAuth2CredentialEntity findByServiceUserIdAndProvider(String id, String provider) {
+		return getSingleResult(
+				OAuth2CredentialEntity.QUERY_FIND_BY_SERVICE_USER_ID_AND_PROVIDER, 
+				OAuth2CredentialEntity.class, 
+				new Param(OAuth2CredentialEntity.serviceUserIdProp, id), 
+				new Param(OAuth2CredentialEntity.serviceProviderNameProp, provider));
 	}
 	
 	/*
@@ -150,7 +164,7 @@ public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
 	 * @see com.idega.block.calendar.data.dao.GoogleCredentialEntityDAO#update(com.idega.block.calendar.data.GoogleCredentialEntity)
 	 */
 	@Override
-	public GoogleCredentialEntity update(GoogleCredentialEntity entity) {
+	public OAuth2CredentialEntity update(OAuth2CredentialEntity entity) {
 		if (entity == null) {
 			return null;
 		}
@@ -158,14 +172,14 @@ public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
 		String message = null;
 		if (entity.getId() == null) {
 			persist(entity);
-			message = GoogleCredentialEntity.class + " created!";
+			message = OAuth2CredentialEntity.class + " created!";
 		} else {
 			merge(entity);
-			message = GoogleCredentialEntity.class + " updated!";
+			message = OAuth2CredentialEntity.class + " updated!";
 		}
 		
 		if (entity.getId() == null) {
-			message = "Failed to update/persist " + GoogleCredentialEntity.class;
+			message = "Failed to update/persist " + OAuth2CredentialEntity.class;
 		}
 		
 		getLogger().info(message);
@@ -177,21 +191,24 @@ public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
 	 * @see com.idega.block.calendar.data.dao.GoogleCredentialEntityDAO#update(java.lang.Long, java.lang.Long, java.lang.String, java.lang.String, com.idega.user.data.User, java.lang.String, java.lang.String)
 	 */
 	@Override
-	public GoogleCredentialEntity update(
+	public OAuth2CredentialEntity update(
 			Long id, 
 			Long expirationTimeMillis,
 			String refreshToken,
 			String accessToken,
 			User user,
-			String clientId,
-			String clientSecret, 
-			String googleUserId) {
+			String serviceUserId, 
+			String serviceProviderName) {
 		
-		GoogleCredentialEntity gce = null;
+		OAuth2CredentialEntity gce = null;
 		if (id != null) {
 			gce = findById(id);
-		} else {
-			gce = new GoogleCredentialEntity();
+		} else if (!StringUtil.isEmpty(serviceUserId) && !StringUtil.isEmpty(serviceProviderName)) {
+			gce = findByServiceUserIdAndProvider(serviceUserId, serviceProviderName);
+		} 
+		
+		if (gce == null) {
+			gce = new OAuth2CredentialEntity();
 		}
 		
 		if (user != null) {
@@ -210,16 +227,12 @@ public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
 			gce.setAccessToken(accessToken);
 		}
 		
-		if (!StringUtil.isEmpty(clientId)) {
-			gce.setClientId(clientId);
+		if (!StringUtil.isEmpty(serviceUserId)) {
+			gce.setServiceUserId(serviceUserId);
 		}
 		
-		if (!StringUtil.isEmpty(clientSecret)) {
-			gce.setClientSecret(clientSecret);
-		}
-		
-		if (!StringUtil.isEmpty(googleUserId)) {
-			gce.setGoogleUserId(googleUserId);
+		if (!StringUtil.isEmpty(serviceProviderName)) {
+			gce.setServiceProviderName(serviceProviderName);
 		}
 		
 		return update(gce);
@@ -230,7 +243,7 @@ public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
 	 * @see com.idega.block.calendar.data.dao.GoogleCredentialEntityDAO#remove(com.idega.block.calendar.data.GoogleCredentialEntity)
 	 */
 	@Override
-	public void remove(GoogleCredentialEntity obj) {
+	public void remove(OAuth2CredentialEntity obj) {
 		super.remove(obj);
 	}
 	
@@ -245,7 +258,8 @@ public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
 			return Boolean.FALSE;
 		}
 		
-		GoogleCredentialEntity entity = findByGoogleUserId(userId);
+		OAuth2CredentialEntity entity = findByServiceUserIdAndProvider(
+				userId, OAuth2LoginConstants.GOOGLE);
 		if (entity == null) {
 			return Boolean.FALSE;
 		}
@@ -268,11 +282,12 @@ public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
 		}
 		
 		// If we need to update tokens only
-		GoogleCredentialEntity entity = findByGoogleUserId(userId);
+		OAuth2CredentialEntity entity = findByServiceUserIdAndProvider(
+				userId, OAuth2LoginConstants.GOOGLE);
 		if (entity != null) {
 			update(entity.getId(), credential.getExpirationTimeMilliseconds(),
 					credential.getRefreshToken(), credential.getAccessToken(), 
-					null, null, null, null);
+					null, null, null);
 		}
 	}
 
@@ -282,7 +297,8 @@ public class GoogleCredentialEntityDAOImpl extends GenericDaoImpl implements
 	 */
 	@Override
 	public void delete(String userId, Credential credential) throws IOException {
-		GoogleCredentialEntity entity = findByGoogleUserId(userId);
+		OAuth2CredentialEntity entity = findByServiceUserIdAndProvider(
+				userId, OAuth2LoginConstants.GOOGLE);
 		if (entity != null) {
 			remove(entity);
 		}

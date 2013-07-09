@@ -6,7 +6,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="2.5">
 
 	<servlet>
         <servlet-name>OAuth Callback Servlet</servlet-name>
-        <servlet-class>com.idega.block.login.servlet.OAuth2CallbackServlet</servlet-class>
+        <servlet-class>com.idega.block.oauth2.client.servlet.OAuth2CallbackServlet</servlet-class>
         <load-on-startup>210</load-on-startup>
     </servlet>
 

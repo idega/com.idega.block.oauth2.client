@@ -93,6 +93,15 @@ import org.apache.oltu.oauth2.common.OAuthProviderType;
  * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
  */
 public interface OAuth2LoginConstants {
+	public static final String IW_BUNDLE_IDENTIFIER = "com.idega.block.oauth2.client";
+	
+	public static final String PARAMETER_OAUTH2_GROUP_ID = "ouath2_group_id";
+	public static final String OAUTH2_GROUP_NAME = "OAuth 2.0 users";
+	public static final String OAUTH2_GROUP_DESCRIPTION = "This group is " +
+			"for users created on system by data taken from external services " +
+			"like google, facebook.com and etc.";
+	public static final String OAUTH2_GROUP_TYPE = "general";
+	
 	public static final String REDIRECT_URI = "http://localhost:8085/oauth2callback";
     public static final String DISCOVERY_URI = "http://localhost:8085";
 
@@ -108,6 +117,8 @@ public interface OAuth2LoginConstants {
     public static final String FACEBOOK = OAuthProviderType.FACEBOOK.getProviderName();
     public static final String FACEBOOK_AUTHZ = OAuthProviderType.FACEBOOK.getAuthzEndpoint();
     public static final String FACEBOOK_TOKEN = OAuthProviderType.FACEBOOK.getTokenEndpoint();
+    public static final String FACEBOOK_APPLICATION_ID_PROPERTY = "facebook_application_id";
+    public static final String FACEBOOK_LOGIN_IMAGE = "images/loginWithFacebook.png";
     
     public static final String GOOGLE = OAuthProviderType.GOOGLE.getProviderName();
     public static final String GOOGLE_AUTHZ = OAuthProviderType.GOOGLE.getAuthzEndpoint();

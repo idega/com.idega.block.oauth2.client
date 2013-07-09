@@ -1,5 +1,5 @@
 /**
- * @(#)ExternalLoginServiceImpl.java    1.0.0 3:13:48 PM
+ * @(#)OAuth2UsersGroup.java    1.0.0 2:09:01 PM
  *
  * Idega Software hf. Source Code Licence Agreement x
  *
@@ -83,182 +83,114 @@
 package com.idega.block.oauth2.client.business.impl;
 
 import java.rmi.RemoteException;
-import java.util.Collection;
 import java.util.logging.Level;
 
 import javax.ejb.CreateException;
+import javax.ejb.FinderException;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
-import com.idega.block.oauth2.client.business.FacebookLoginService;
+import com.idega.block.oauth2.client.OAuth2LoginConstants;
 import com.idega.business.IBOLookup;
 import com.idega.business.IBOLookupException;
 import com.idega.core.business.DefaultSpringBean;
-import com.idega.user.business.UserBusiness;
+import com.idega.data.IDOLookup;
+import com.idega.data.IDOLookupException;
+import com.idega.data.genericentity.GroupHome;
+import com.idega.idegaweb.IWMainApplication;
+import com.idega.idegaweb.IWMainApplicationSettings;
+import com.idega.user.business.GroupBusiness;
+import com.idega.user.business.StandardGroup;
+import com.idega.user.data.Group;
 import com.idega.util.CoreUtil;
-import com.idega.util.IWTimestamp;
-import com.idega.util.ListUtil;
-import com.idega.util.StringUtil;
-import com.restfb.DefaultFacebookClient;
-import com.restfb.Parameter;
-import com.restfb.types.User;
 
 /**
- * @see FacebookLoginService
+ * <p>Group for holding users from external services like google.com or 
+ * facebook.com</p>
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *
- * @version 1.0.0 Jun 21, 2013
+ * @version 1.0.0 Jul 5, 2013
  * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
  */
-@Service(FacebookLoginService.BEAN_NAME)
+@Service(OAuth2UsersGroupBean.BEAN_NAME)
 @Scope(BeanDefinition.SCOPE_SINGLETON)
-public class FacebookLoginServiceImpl extends DefaultSpringBean implements FacebookLoginService{
+public class OAuth2UsersGroupBean extends DefaultSpringBean implements
+		StandardGroup {
 
-	private com.idega.user.business.UserBusiness userBusiness = null;
+	public static final String BEAN_NAME = "oAuth2UsersGroupBean";
 	
-	/**
-	 * 
-	 * <p>Creates Idega {@link com.idega.user.data.User} from 
-	 * facebook.com {@link User}</p>
-	 * @param facebookUser to create in Idega system, not <code>null</code>;
-	 * @return Idega {@link com.idega.user.data.User} or <code>null</code>
-	 * on failure;
-	 * @author <a href="mailto:martynas@idega.com">Martynas Stakė</a>
-	 */
-	protected com.idega.user.data.User createUser(User facebookUser) {
-		if (facebookUser == null) {
-			return null;
-		}
-		
-		com.idega.user.data.User idegaUser = getIdegaUser(facebookUser);
-		if (idegaUser != null) {
-			getLogger().info("User by email: " + facebookUser.getEmail() + " already exists!");
-			return idegaUser;
-		}
-		
-		try {
-			return getUserBusiness().createUser(
-					facebookUser.getFirstName(), 
-					facebookUser.getMiddleName(), 
-					facebookUser.getLastName(), 
-					facebookUser.getUsername(), 
-					null, 
-					facebookUser.getBio(), 
-					"male".equals(facebookUser.getGender()) ? 1 : 2, 
-					new IWTimestamp(facebookUser.getBirthdayAsDate()), 
-					null, facebookUser.getName());
-		} catch (RemoteException e) {
-			getLogger().log(Level.WARNING, "Failed to connect data source, " +
-					"cause of: ", e);
-		} catch (CreateException e) {
-			getLogger().log(Level.WARNING, "Failed to create " + User.class + 
-					" cause of: ", e);
-		}
-		
-		return null;
-	}
+	private GroupBusiness groupBusiness;
 	
-	@Override
-	public com.idega.user.data.User loginByFacebookAccount(String email, String password) {
-		User facebookUser = loginToFacebook(email, password);
-		if (facebookUser == null) {
-			getLogger().warning("Failed to log in to facebook.com");
-			return null;
-		}
-		
-		return createUser(facebookUser);
-	}
+	private GroupHome groupHome;
 	
-	/*
-	 * (non-Javadoc)
-	 * @see com.idega.mobile.business.ExternalLoginService#loginToFacebook(java.lang.String, java.lang.String)
+	/* (non-Javadoc)
+	 * @see com.idega.user.business.StandardGroup#getGroup()
 	 */
 	@Override
-	public User loginToFacebook(String email, String password) {
-//		if (email == null || StringUtil.isEmpty(password)) {
-//			return null;
-//		}
-
-		DefaultFacebookClient facebookClient = new DefaultFacebookClient("CAACEdEose0cBALyQGL8QYqwZBuNgLcXDXPTnxs44VriEao3qxiimYRnZCPb7yBXbzXhblOlQFZCzMTPDnZBkMNLkrAMzNpy3a97MwadyZBIjHbgzZCQSGpp1u7ysQXtZBqiTPV4ZCL6LxomcRmwl09YeFWg4CRjosUTZCmonjnxPT1QZDZD");
-				
-//		AccessToken accessToken = null;
-//		try {
-//			accessToken = facebookClient.obtainAppAccessToken(email, password);
-//		} catch (Exception e) {
-//			getLogger().log(
-//					Level.WARNING, 
-//					"Failed to log in to facebook.com by email: " + email + 
-//					", cause of: ", e);			
-//		}
+	public Group getGroup() {
+		IWMainApplicationSettings settings = getIWMainApplication().getSettings();
+		String groupId = settings.getProperty(OAuth2LoginConstants.PARAMETER_OAUTH2_GROUP_ID);
 		
-//		if (accessToken == null) {
-//			return null;
-//		}
+		Group group = null;
+		if (groupId != null) {
+			try {
+				group = (Group) getGroupHome().findByPrimaryKey(new Integer(groupId));
+			} catch (NumberFormatException e) {
+				getLogger().log(Level.WARNING, 
+						"Failed to convert group id: " + groupId + " to integer!");
+			} catch (FinderException e) {
+				getLogger().log(Level.WARNING, "Nothing found by given primary key: " + groupId);
+			}
+		} 
 		
-		User user = facebookClient.fetchObject("me", User.class,
-				  Parameter.with("fields", "id, name"));
-		if (user == null) {
-			getLogger().log(
-					Level.WARNING,
-					"Failed to retrieve data about facebook.com user by email: " + 
-					email);
-			return null;
-		}
-		
-		return user;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see com.idega.mobile.business.ExternalLoginService#getIdegaUser(java.lang.String, java.lang.String)
-	 */
-	@Override
-	public com.idega.user.data.User getIdegaUser(String email, String password) {
-		return getIdegaUser(loginToFacebook(email, password));
-	}
-	
-	/*
-	 * (non-Javadoc)
-	 * @see com.idega.mobile.business.ExternalLoginService#getIdegaUser(com.restfb.types.User)
-	 */
-	@Override
-	public com.idega.user.data.User getIdegaUser(User facebookUser) {
-		if (facebookUser == null) {
-			return null;
-		}
-		
-		Collection<com.idega.user.data.User> users = getUsersByEmail(facebookUser.getEmail());
-		if (ListUtil.isEmpty(users)) {
-			return createUser(facebookUser);
+		if (group == null) {
+			try {
+				group = getGroupBusiness().createGroup(
+						OAuth2LoginConstants.OAUTH2_GROUP_NAME,
+						OAuth2LoginConstants.OAUTH2_GROUP_DESCRIPTION,
+						OAuth2LoginConstants.OAUTH2_GROUP_TYPE);
+			} catch (RemoteException e) {
+				getLogger().log(Level.WARNING, 
+						"Failed to connect data source, cause of: ", e);
+			} catch (CreateException e) {
+				getLogger().log(Level.WARNING, "Failed to create group: ", e);
+			}
 		}
 
-		return users.iterator().next();
+		return group;
 	}
 	
-	protected Collection<com.idega.user.data.User> getUsersByEmail(String email) {
-		if (StringUtil.isEmpty(email)) {
-			return null;
+	protected IWMainApplication getIWMainApplication(){
+		return IWMainApplication.getIWMainApplication(CoreUtil.getIWContext());
+	}
+
+	protected GroupHome getGroupHome() {
+		if (this.groupHome == null) {
+			try {
+				this.groupHome = (GroupHome) IDOLookup.getHome(GroupHome.class);
+			} catch (IDOLookupException e) {
+				getLogger().log(Level.WARNING, 
+						"Unable to get " + GroupHome.class, e);
+			}
 		}
 		
-		return getUserBusiness().getUsersByEmail(email);
+		return this.groupHome;
 	}
 	
-	protected com.idega.user.business.UserBusiness getUserBusiness() {
-		if (this.userBusiness != null) {
-			return this.userBusiness;
+	protected GroupBusiness getGroupBusiness() {
+		if (this.groupBusiness == null) {
+			try {
+				this.groupBusiness = (GroupBusiness) IBOLookup.getServiceInstance(
+						CoreUtil.getIWContext(), GroupBusiness.class);
+			} catch (IBOLookupException e) {
+				getLogger().log(Level.WARNING, 
+						"Unable to get " + GroupBusiness.class, e);
+			}
 		}
 		
-		try {
-			this.userBusiness = IBOLookup.getServiceInstance(
-					CoreUtil.getIWContext(), UserBusiness.class);
-		} catch (IBOLookupException e) {
-			getLogger().log(Level.WARNING, 
-					"Failed to get " + UserBusiness.class + ", cause of: ", e);
-		}
-		
-		return this.userBusiness;
+		return this.groupBusiness;
 	}
 }

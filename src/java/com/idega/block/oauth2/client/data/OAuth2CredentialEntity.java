@@ -91,15 +91,17 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
-import com.google.api.client.auth.oauth2.Credential;
 import com.idega.business.IBOLookup;
 import com.idega.business.IBOLookupException;
 import com.idega.user.business.UserBusiness;
 import com.idega.user.data.User;
+import com.idega.util.CoreConstants;
 import com.idega.util.CoreUtil;
 
 /**
@@ -111,32 +113,46 @@ import com.idega.util.CoreUtil;
  * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
  */
 @Entity
-@Table(name = GoogleCredentialEntity.TABLE_NAME)
+@Table(
+		name = OAuth2CredentialEntity.TABLE_NAME,
+		uniqueConstraints = @UniqueConstraint(
+				columnNames = {
+						OAuth2CredentialEntity.COLUMN_SERVICE_USER_ID, 
+						OAuth2CredentialEntity.COLUMN_SERVICE_PROVIDER_NAME, 
+						OAuth2CredentialEntity.COLUMN_IDEGA_USER}))
 @NamedQueries({
 	@NamedQuery(
-			name = GoogleCredentialEntity.QUERY_FIND_ALL,
-			query = "FROM GoogleCredentialEntity g"
+			name = OAuth2CredentialEntity.QUERY_FIND_ALL,
+			query = "FROM OAuth2CredentialEntity g"
 			),
 	@NamedQuery(
-			name = GoogleCredentialEntity.QUERY_FIND_BY_ID,
-			query = "FROM GoogleCredentialEntity g " +
-					"WHERE g.id =:" + GoogleCredentialEntity.idProp
+			name = OAuth2CredentialEntity.QUERY_FIND_BY_ID,
+			query = "FROM OAuth2CredentialEntity g " +
+					"WHERE g.id =:" + OAuth2CredentialEntity.idProp
 			),
 	@NamedQuery(
-			name = GoogleCredentialEntity.QUERY_FIND_BY_GOOGLE_USER_ID,
-			query = "FROM GoogleCredentialEntity g " +
-					"WHERE g.googleUserId =:" + GoogleCredentialEntity.googleUserIdProp
+			name = OAuth2CredentialEntity.QUERY_FIND_BY_SERVICE_USER_ID,
+			query = "FROM OAuth2CredentialEntity g " +
+					"WHERE g.serviceUserId =:" + OAuth2CredentialEntity.serviceUserIdProp
+			),
+	@NamedQuery(
+			name = OAuth2CredentialEntity.QUERY_FIND_BY_SERVICE_USER_ID_AND_PROVIDER,
+			query = "FROM OAuth2CredentialEntity g " +
+					"WHERE g.serviceUserId =:" + OAuth2CredentialEntity.serviceUserIdProp + 
+					CoreConstants.SPACE + 
+					"AND g.serviceProviderName =:" + OAuth2CredentialEntity.serviceProviderNameProp
 			)
 })
-public class GoogleCredentialEntity implements Serializable {
+public class OAuth2CredentialEntity implements Serializable {
 
 	private static final long serialVersionUID = 5984835287070779833L;
 
-	public static final String TABLE_NAME = "google_credential";
+	public static final String TABLE_NAME = "oauth2_credential";
 	
-	public static final String QUERY_FIND_ALL = "googleCredentialEntity.findAll";
-	public static final String QUERY_FIND_BY_ID = "googleCredentialEntity.findByID";
-	public static final String QUERY_FIND_BY_GOOGLE_USER_ID = "googleCredentialEntity.findByGoogleUserId";
+	public static final String QUERY_FIND_ALL = "oAuth2CredentialEntity.findAll";
+	public static final String QUERY_FIND_BY_ID = "oAuth2CredentialEntity.findByID";
+	public static final String QUERY_FIND_BY_SERVICE_USER_ID = "oAuth2CredentialEntity.findByServiceUserId";
+	public static final String QUERY_FIND_BY_SERVICE_USER_ID_AND_PROVIDER = "oAuth2CredentialEntity.findByServiceUserIdAndProvider"; 
 	
 	public static final String idProp = "id";
     @Id @GeneratedValue(strategy = GenerationType.AUTO)
@@ -145,13 +161,15 @@ public class GoogleCredentialEntity implements Serializable {
     /** Access token or {@code null} for none. */
     public static final String accessTokenProp = "accessToken";
     public static final String COLUMN_ACCESS_TOKEN = "access_token";
-    @Column(name = COLUMN_ACCESS_TOKEN)
+    @Lob
+    @Column(name = COLUMN_ACCESS_TOKEN, length = 5120)
     private String accessToken;
 
     /** Refresh token {@code null} for none. */
     public static final String refreshTokenProp = "refreshToken";
     public static final String COLUMN_REFRESH_TOKEN = "refresh_token";
-    @Column(name = COLUMN_REFRESH_TOKEN)
+    @Lob
+    @Column(name = COLUMN_REFRESH_TOKEN, length = 5120)
     private String refreshToken;
 
     /** Expiration time in milliseconds {@code null} for none. */
@@ -162,50 +180,18 @@ public class GoogleCredentialEntity implements Serializable {
     
     public static final String idegaUserProp = "idegaUser";
     public static final String COLUMN_IDEGA_USER = "idega_user_id";
-    @Column(name = COLUMN_IDEGA_USER)
+    @Column(name = COLUMN_IDEGA_USER, nullable = false)
     private Long idegaUser;
     
-    public static final String googleUserIdProp = "googleUserId";
-    public static final String COLUMN_GOOGLE_USER_ID = "google_user_id";
-    @Column(name = COLUMN_GOOGLE_USER_ID)
-    private String googleUserId;
+    public static final String serviceUserIdProp = "serviceUserId";
+    public static final String COLUMN_SERVICE_USER_ID = "service_user_id";
+    @Column(name = COLUMN_SERVICE_USER_ID, nullable = false)
+    private String serviceUserId;
     
-    public static final String clientIdProp = "clientId";
-    public static final String COLUMN_CLIENT_ID = "client_id";
-    @Column(name = COLUMN_CLIENT_ID)
-    private String clientId;
-    
-    public static final String clientSecretProp = "clientSecret";
-    public static final String COLUMN_CLIENT_SECRET = "client_secret";
-    @Column(name = COLUMN_CLIENT_SECRET)
-    private String clientSecret;
-    
-    /**
-     * Store information from the credential.
-     *
-     * @param credential credential whose {@link Credential#getAccessToken access token},
-     *        {@link Credential#getRefreshToken refresh token}, and
-     *        {@link Credential#getExpirationTimeMilliseconds expiration time} need to be stored
-     */
-    void store(Credential credential) {
-      accessToken = credential.getAccessToken();
-      refreshToken = credential.getRefreshToken();
-      expirationTimeMillis = credential.getExpirationTimeMilliseconds();
-    }
-
-    /**
-     * Load information into the credential.
-     *
-     * @param credential credential whose {@link Credential#setAccessToken access token},
-     *        {@link Credential#setRefreshToken refresh token}, and
-     *        {@link Credential#setExpirationTimeMilliseconds expiration time} need to be set if the
-     *        credential already exists in storage
-     */
-    void load(Credential credential) {
-      credential.setAccessToken(accessToken);
-      credential.setRefreshToken(refreshToken);
-      credential.setExpirationTimeMilliseconds(expirationTimeMillis);
-    }
+    public static final String serviceProviderNameProp = "serviceProviderName";
+    public static final String COLUMN_SERVICE_PROVIDER_NAME = "service_provider";
+    @Column(name = COLUMN_SERVICE_PROVIDER_NAME, nullable = false)
+    private String serviceProviderName;
 
 	public Long getId() {
 		return id;
@@ -270,27 +256,19 @@ public class GoogleCredentialEntity implements Serializable {
 		}
 	}
 
-	public String getClientId() {
-		return clientId;
+	public String getServiceUserId() {
+		return serviceUserId;
 	}
 
-	public void setClientId(String clientId) {
-		this.clientId = clientId;
+	public void setServiceUserId(String serviceUserId) {
+		this.serviceUserId = serviceUserId;
 	}
 
-	public String getClientSecret() {
-		return clientSecret;
+	public String getServiceProviderName() {
+		return serviceProviderName;
 	}
 
-	public void setClientSecret(String clientSecret) {
-		this.clientSecret = clientSecret;
-	}
-
-	public String getGoogleUserId() {
-		return googleUserId;
-	}
-
-	public void setGoogleUserId(String googleUserId) {
-		this.googleUserId = googleUserId;
+	public void setServiceProviderName(String serviceProviderName) {
+		this.serviceProviderName = serviceProviderName;
 	}
 }

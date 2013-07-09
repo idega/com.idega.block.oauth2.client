@@ -32,13 +32,6 @@
 			<version>${oltu.oauth2.version}</version>
 		</dependency>
 
-		<!-- Restful services for Facebook -->
-		<dependency>
-			<groupId>com.restfb</groupId>
-			<artifactId>restfb</artifactId>
-			<version>1.6.12</version>
-		</dependency>
-
 		<!-- Login services for Google -->
 		<dependency>
 			<groupId>com.google.http-client</groupId>
@@ -60,6 +53,10 @@
 		<dependency>
 			<groupId>com.idega.block.platform</groupId>
 			<artifactId>com.idega.block.login</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.idega.block.platform</groupId>
+			<artifactId>com.idega.user</artifactId>
 		</dependency>
 	</dependencies>
 </project>
