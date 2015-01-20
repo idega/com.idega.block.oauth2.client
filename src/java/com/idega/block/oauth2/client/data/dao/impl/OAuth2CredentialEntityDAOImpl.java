@@ -303,4 +303,14 @@ public class OAuth2CredentialEntityDAOImpl extends GenericDaoImpl implements
 			remove(entity);
 		}
 	}
+
+	@Override
+	public OAuth2CredentialEntity getByIdegaUserIdAndProvider(String icUserId,
+			String provider) {
+		return getSingleResult(OAuth2CredentialEntity.QUERY_FIND_BY_IDEGA_USER_ID_AND_PROVIDER, 
+				OAuth2CredentialEntity.class, 
+				new Param(OAuth2CredentialEntity.idegaUserProp, icUserId),
+				new Param(OAuth2CredentialEntity.serviceProviderNameProp, provider)
+		);
+	}
 }

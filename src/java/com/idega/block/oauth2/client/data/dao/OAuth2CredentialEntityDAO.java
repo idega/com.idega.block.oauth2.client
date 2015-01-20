@@ -181,4 +181,8 @@ public interface OAuth2CredentialEntityDAO extends GenericDao, com.google.api.cl
 	 */
 	public OAuth2CredentialEntity findByServiceUserIdAndProvider(String id,
 			String provider);
+	
+	public OAuth2CredentialEntity getByIdegaUserIdAndProvider(String icUserId,
+			String provider);
+	
 }

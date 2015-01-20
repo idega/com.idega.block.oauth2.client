@@ -141,7 +141,14 @@ import com.idega.util.CoreUtil;
 					"WHERE g.serviceUserId =:" + OAuth2CredentialEntity.serviceUserIdProp + 
 					CoreConstants.SPACE + 
 					"AND g.serviceProviderName =:" + OAuth2CredentialEntity.serviceProviderNameProp
-			)
+	),
+	@NamedQuery(
+			name = OAuth2CredentialEntity.QUERY_FIND_BY_IDEGA_USER_ID_AND_PROVIDER,
+			query = "FROM OAuth2CredentialEntity ce " +
+					"WHERE ce.idegaUser =:" + OAuth2CredentialEntity.idegaUserProp + 
+					CoreConstants.SPACE + 
+					"AND ce.serviceProviderName =:" + OAuth2CredentialEntity.serviceProviderNameProp
+	)
 })
 public class OAuth2CredentialEntity implements Serializable {
 
@@ -153,6 +160,7 @@ public class OAuth2CredentialEntity implements Serializable {
 	public static final String QUERY_FIND_BY_ID = "oAuth2CredentialEntity.findByID";
 	public static final String QUERY_FIND_BY_SERVICE_USER_ID = "oAuth2CredentialEntity.findByServiceUserId";
 	public static final String QUERY_FIND_BY_SERVICE_USER_ID_AND_PROVIDER = "oAuth2CredentialEntity.findByServiceUserIdAndProvider"; 
+	public static final String QUERY_FIND_BY_IDEGA_USER_ID_AND_PROVIDER = "oAuth2CredentialEntity.findByIdegaUserIdAndProvider";
 	
 	public static final String idProp = "id";
     @Id @GeneratedValue(strategy = GenerationType.AUTO)
