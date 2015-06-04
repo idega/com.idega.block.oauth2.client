@@ -62,5 +62,15 @@
 			<groupId>com.idega.block.platform</groupId>
 			<artifactId>com.idega.user</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-drive</artifactId>
+			<version>v2-rev171-1.20.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-youtube</artifactId>
+			<version>v3-rev136-1.20.0</version>
+		</dependency>
 	</dependencies>
 </project>
