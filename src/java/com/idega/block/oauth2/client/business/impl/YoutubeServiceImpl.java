@@ -238,13 +238,13 @@ public class YoutubeServiceImpl extends DefaultSpringBean implements
 				getLogger().log(Level.WARNING, "Failed to get playlist", e);
 			}
 
-	        playlistRequest.setPlaylistId(getApplicationProperty("youtube.playlist.id", "PLF2B7F053B7B480E1"));
+	        playlistRequest.setPlaylistId(getApplicationProperty("youtube.playlist.ids", "PLbOPjwR6aLj-te5aF-dI_ZCJ1mgPvqF3N"));
 
 	        // Only retrieve data used in this application, thereby making
 	        // the application more efficient. See:
 	        // https://developers.google.com/youtube/v3/getting-started#partial
 	        playlistRequest.setFields(
-	                "items(contentDetails/videoId,snippet/title,snippet/publishedAt),nextPageToken,pageInfo");
+	                "items(contentDetails/videoId,snippet),nextPageToken,pageInfo");
 
 	        String nextToken = "";
 
