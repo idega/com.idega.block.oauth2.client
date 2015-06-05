@@ -1,5 +1,5 @@
 /**
- * @(#)GoogleDriveService.java    1.0.0 11:57:59
+ * @(#)YoutubeService.java    1.0.0 19:47:09
  *
  * Idega Software hf. Source Code Licence Agreement x
  *
@@ -82,108 +82,27 @@
  */
 package com.idega.block.oauth2.client.business;
 
-import java.util.Collections;
 import java.util.List;
 
 import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.services.drive.Drive;
-import com.google.api.services.drive.Drive.Files;
-import com.google.api.services.drive.model.About;
-import com.google.api.services.drive.model.File;
-import com.google.api.services.drive.model.FileList;
-import com.idega.block.oauth2.client.presentation.bean.GoogleDriveObject;
+import com.google.api.services.youtube.YouTube;
+import com.google.api.services.youtube.model.Channel;
+import com.google.api.services.youtube.model.PlaylistItem;
 
 /**
- * <p>Common stuff for accessing files and folders from drive.google.com</p>
+ * <p>TODO</p>
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *
- * @version 1.0.0 2015 June 3
+ * @version 1.0.0 2015 June 4
  * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
  */
-public interface GoogleDriveService {
+public interface YoutubeService {
 
-	/**
-	 * 
-	 * <p>Builds new client for {@link Drive} access for golf.is application</p>
-	 * @return new {@link Drive} client;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	Drive getDrive(String applicationName, Credential credentials);
+	YouTube getService(String applicationName, Credential credentials);
 
-	/**
-	 * 
-	 * <p>Builds new client for {@link Drive} access for golf.is application, 
-	 * and takes access to files.</p>
-	 * @return access to files or <code>null</code> on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	Files getFiles(String applicationName, Credential credentials);
+	List<Channel> getChannels(String applicationName, Credential credentials);
 
-	/**
-	 * 
-	 * @param query to search for files. Skipped if <code>null</code>; 
-	 * More info: https://developers.google.com/drive/web/search-parameters
-	 * @return {@link FileList} filtered by given query or <code>null</code>
-	 * on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	FileList getFilesList(String applicationName, Credential credentials,
-			String query);
+	List<PlaylistItem> getUploads(String applicationName, Credential credentials);
 
-	/**
-	 * 
-	 * @param query to search for files. Not <code>null</code>. 
-	 * More info: https://developers.google.com/drive/web/search-parameters
-	 * @return {@link File}s filtered by given query or <code>null</code>
-	 * on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	List<File> getFiles(String applicationName, Credential credentials,
-			String query);
-
-	/**
-	 * 
-	 * @param applicationName in http://console.developers.google.com , 
-	 * not <code>null</code>;
-	 * @param email of application in http://console.developers.google.com,
-	 * not <code>null</code>;
-	 * @param query to filter files by, defined in 
-	 * http://developers.google.com/drive/web/search-parameters skipped 
-	 * if <code>null</code>;
-	 * @return files and folders in http://drive.google.com or empty list on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	List<GoogleDriveObject> getFiles(String applicationName, String email,
-			String query);
-
-	List<GoogleDriveObject> getDirectoryChildren(String applicationName,
-			String email, String parentId);
-
-	/**
-	 * 
-	 * @param files to convert to DWR bean, not <code>null</code>;
-	 * @return converted list or {@link Collections#emptyList()}
-	 * on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	List<GoogleDriveObject> getConverted(List<File> files);
-
-	/**
-	 * 
-	 * @param drive to get info for, not <code>null</code>;
-	 * @return info about the drive or <code>null</code> on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	About getDriveInfo(Drive drive);
-
-	/**
-	 * 
-	 * @param drive to get info for, not <code>null</code>;
-	 * @return id of Google Drive root folder or <code>null</code> on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	String getRootFolderId(Drive drive);
-
-	
 }

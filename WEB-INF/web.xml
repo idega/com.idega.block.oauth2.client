@@ -10,6 +10,17 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="2.5">
         <load-on-startup>210</load-on-startup>
     </servlet>
 
+	<servlet>
+		<display-name>GoogleDriveDownloader</display-name>
+		<servlet-name>GoogleDriveDownloader</servlet-name>
+		<servlet-class>com.idega.block.oauth2.client.servlet.GoogleDriveDownloader</servlet-class>
+	</servlet>
+
+	<servlet-mapping>
+	    <servlet-name>GoogleDriveDownloader</servlet-name>
+	    <url-pattern>/google-drive</url-pattern>
+	</servlet-mapping>
+
     <servlet-mapping>
         <servlet-name>OAuth Callback Servlet</servlet-name>
         <url-pattern>/oauth2callback</url-pattern>

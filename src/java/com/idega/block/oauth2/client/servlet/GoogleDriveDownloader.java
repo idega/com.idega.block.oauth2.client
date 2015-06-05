@@ -1,5 +1,5 @@
 /**
- * @(#)GoogleDriveService.java    1.0.0 11:57:59
+ * @(#)GoogleDriveDownloader.java    1.0.0 16:04:19
  *
  * Idega Software hf. Source Code Licence Agreement x
  *
@@ -80,110 +80,105 @@
  *     License that was purchased to become eligible to receive the Source 
  *     Code after Licensee receives the source code. 
  */
-package com.idega.block.oauth2.client.business;
+package com.idega.block.oauth2.client.servlet;
 
-import java.util.Collections;
-import java.util.List;
+import java.io.IOException;
+import java.io.InputStream;
+
+import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpResponse;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.Drive.Files;
-import com.google.api.services.drive.model.About;
 import com.google.api.services.drive.model.File;
-import com.google.api.services.drive.model.FileList;
-import com.idega.block.oauth2.client.presentation.bean.GoogleDriveObject;
+import com.idega.block.oauth2.client.business.GoogleDriveService;
+import com.idega.block.oauth2.client.business.impl.GoogleAuthorizationService;
+import com.idega.util.StringUtil;
+import com.idega.util.expression.ELUtil;
 
 /**
- * <p>Common stuff for accessing files and folders from drive.google.com</p>
+ * <p>Downloads files from Google Drive</p>
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *
- * @version 1.0.0 2015 June 3
+ * @version 1.0.0 2015 June 4
  * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
  */
-public interface GoogleDriveService {
 
-	/**
-	 * 
-	 * <p>Builds new client for {@link Drive} access for golf.is application</p>
-	 * @return new {@link Drive} client;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	Drive getDrive(String applicationName, Credential credentials);
+public class GoogleDriveDownloader extends HttpServlet {
 
-	/**
-	 * 
-	 * <p>Builds new client for {@link Drive} access for golf.is application, 
-	 * and takes access to files.</p>
-	 * @return access to files or <code>null</code> on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	Files getFiles(String applicationName, Credential credentials);
+	private static final long serialVersionUID = -798953545889161145L;
 
-	/**
-	 * 
-	 * @param query to search for files. Skipped if <code>null</code>; 
-	 * More info: https://developers.google.com/drive/web/search-parameters
-	 * @return {@link FileList} filtered by given query or <code>null</code>
-	 * on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	FileList getFilesList(String applicationName, Credential credentials,
-			String query);
+	public static final String SERVLET_PATH = "/google-drive";
 
-	/**
-	 * 
-	 * @param query to search for files. Not <code>null</code>. 
-	 * More info: https://developers.google.com/drive/web/search-parameters
-	 * @return {@link File}s filtered by given query or <code>null</code>
-	 * on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	List<File> getFiles(String applicationName, Credential credentials,
-			String query);
+	public static final String PARAMETER_FILE_ID = "id";
 
-	/**
-	 * 
-	 * @param applicationName in http://console.developers.google.com , 
-	 * not <code>null</code>;
-	 * @param email of application in http://console.developers.google.com,
-	 * not <code>null</code>;
-	 * @param query to filter files by, defined in 
-	 * http://developers.google.com/drive/web/search-parameters skipped 
-	 * if <code>null</code>;
-	 * @return files and folders in http://drive.google.com or empty list on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	List<GoogleDriveObject> getFiles(String applicationName, String email,
-			String query);
+	public static final String PARAMETER_ACCOUNT = "account";
 
-	List<GoogleDriveObject> getDirectoryChildren(String applicationName,
-			String email, String parentId);
+	@Autowired
+	private GoogleDriveService googleDriveService;
 
-	/**
-	 * 
-	 * @param files to convert to DWR bean, not <code>null</code>;
-	 * @return converted list or {@link Collections#emptyList()}
-	 * on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	List<GoogleDriveObject> getConverted(List<File> files);
+	@Autowired
+	private GoogleAuthorizationService googleAuthorizationService;
 
-	/**
-	 * 
-	 * @param drive to get info for, not <code>null</code>;
-	 * @return info about the drive or <code>null</code> on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	About getDriveInfo(Drive drive);
+	protected GoogleAuthorizationService getGoogleAuthorizationService() {
+		if (this.googleAuthorizationService == null) {
+			ELUtil.getInstance().autowire(this);
+		}
 
-	/**
-	 * 
-	 * @param drive to get info for, not <code>null</code>;
-	 * @return id of Google Drive root folder or <code>null</code> on failure;
-	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
-	 */
-	String getRootFolderId(Drive drive);
+		return this.googleAuthorizationService;
+	}
 
-	
+	protected GoogleDriveService getGoogleDriveService() {
+		if (this.googleDriveService == null) {
+			ELUtil.getInstance().autowire(this);
+		}
+
+		return this.googleDriveService;
+	}
+
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		Credential credential = getGoogleAuthorizationService().getCredential(
+				request.getParameter(PARAMETER_ACCOUNT));
+		if (credential != null) {
+			Drive drive = getGoogleDriveService().getDrive("Dummy app name", credential);
+			if (drive != null) {
+				Files service = drive.files();
+				if (service != null) {
+					File file = service.get(request.getParameter(PARAMETER_FILE_ID)).execute();
+					String downloadUrl = file.getDownloadUrl();
+					if (StringUtil.isEmpty(downloadUrl)) {
+						downloadUrl = file.getExportLinks().get("application/pdf");
+					}
+					
+					HttpResponse resp = drive.getRequestFactory()
+							.buildGetRequest(new GenericUrl(downloadUrl)).execute();
+			        InputStream fileContent = resp.getContent();
+					response.setContentType("application/pdf");
+					if (file.getFileExtension() != null) {
+					    response.setHeader("Content-Disposition", "attachment;filename=\"" + file.getTitle() + "\"");
+					} else {
+						response.setHeader("Content-Disposition", "attachment;filename=\"" + file.getTitle() + ".pdf\"");
+					}
+
+					ServletOutputStream out = response.getOutputStream();
+					byte[] buffer = new byte[1024 * 10]; 
+				    int bytesRead;
+				    while ((bytesRead = fileContent.read(buffer)) != -1) {
+				        out.write(buffer, 0, bytesRead);
+				    }
+				}
+			}
+		}
+	}
 }

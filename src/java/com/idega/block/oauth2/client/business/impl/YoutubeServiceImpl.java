@@ -1,5 +1,5 @@
 /**
- * @(#)GoogleDriveServiceImpl.java    1.0.0 12:09:16
+ * @(#)YoutubeServiceImpl.java    1.0.0 19:47:57
  *
  * Idega Software hf. Source Code Licence Agreement x
  *
@@ -89,7 +89,6 @@ import java.util.List;
 import java.util.logging.Level;
 
 import org.directwebremoting.annotations.Param;
-import org.directwebremoting.annotations.RemoteMethod;
 import org.directwebremoting.annotations.RemoteProxy;
 import org.directwebremoting.spring.SpringCreator;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,30 +99,28 @@ import org.springframework.stereotype.Service;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.services.drive.Drive;
-import com.google.api.services.drive.Drive.Files;
-import com.google.api.services.drive.model.About;
-import com.google.api.services.drive.model.File;
-import com.google.api.services.drive.model.FileList;
-import com.idega.block.oauth2.client.business.GoogleDriveService;
-import com.idega.block.oauth2.client.presentation.bean.GoogleDriveObject;
+import com.google.api.services.youtube.YouTube;
+import com.google.api.services.youtube.model.Channel;
+import com.google.api.services.youtube.model.ChannelListResponse;
+import com.google.api.services.youtube.model.PlaylistItem;
+import com.google.api.services.youtube.model.PlaylistItemListResponse;
+import com.idega.block.oauth2.client.business.YoutubeService;
 import com.idega.core.business.DefaultSpringBean;
 import com.idega.util.ListUtil;
-import com.idega.util.StringUtil;
 import com.idega.util.expression.ELUtil;
 
 /**
- * <p>Implementation of {@link GoogleDriveService}</p>
+ * <p>Provides stuff for youtube service</p>
  * <p>You can report about problems to: 
  * <a href="mailto:martynas@idega.is">Martynas Stakė</a></p>
  *
- * @version 1.0.0 2015 June 3
+ * @version 1.0.0 2015 birž. 4
  * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
  */
 /*
  * Spring
  */
-@Service(GoogleDriveServiceImpl.BEAN_NAME)
+@Service(YoutubeServiceImpl.BEAN_NAME)
 @Scope(BeanDefinition.SCOPE_SINGLETON)
 //@EnableAspectJAutoProxy(proxyTargetClass=true)
 
@@ -131,23 +128,24 @@ import com.idega.util.expression.ELUtil;
  * DWR
  */
 @RemoteProxy(
-	name=GoogleDriveServiceImpl.JAVASCRIPT_CLASS_NAME,
+	name=YoutubeServiceImpl.JAVASCRIPT_CLASS_NAME,
 	creator=SpringCreator.class,
 	creatorParams={
 	@Param(
 		name="beanName",
-		value=GoogleDriveServiceImpl.BEAN_NAME),
+		value=YoutubeServiceImpl.BEAN_NAME),
 	@Param(
 		name="javascript",
-		value=GoogleDriveServiceImpl.JAVASCRIPT_CLASS_NAME)
+		value=YoutubeServiceImpl.JAVASCRIPT_CLASS_NAME)
 	}
 )
-public class GoogleDriveServiceImpl extends DefaultSpringBean implements
-		GoogleDriveService {
+public class YoutubeServiceImpl extends DefaultSpringBean implements
+		YoutubeService {
 
-	public static final String BEAN_NAME = "googleDriveService";
 
-	public static final String JAVASCRIPT_CLASS_NAME = "GoogleDriveService";
+	public static final String BEAN_NAME = "youtubeService";
+
+	public static final String JAVASCRIPT_CLASS_NAME = "YoutubeService";
 
 	@Autowired
 	private GoogleAuthorizationService googleAuthorizationService;
@@ -160,168 +158,116 @@ public class GoogleDriveServiceImpl extends DefaultSpringBean implements
 		return this.googleAuthorizationService;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.idega.block.oauth2.client.business.GoogleDriveService#getDrive(java.lang.String, com.google.api.client.auth.oauth2.Credential)
+	/*
+	 * (non-Javadoc)
+	 * @see com.idega.block.oauth2.client.business.YoutubeService#getService(java.lang.String, com.google.api.client.auth.oauth2.Credential)
 	 */
 	@Override
-	public Drive getDrive(
+	public YouTube getService(
 			String applicationName, 
 			Credential credentials) {
-		if (!StringUtil.isEmpty(applicationName)) {
-			return new Drive.Builder(
-					new NetHttpTransport(), 
-					new JacksonFactory(), 
-					credentials).setApplicationName(applicationName).build();
-		}
-
-		return null;
+		return new YouTube.Builder(
+				new NetHttpTransport(), 
+				new JacksonFactory(),
+				credentials).setApplicationName(applicationName).build();
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see com.idega.block.oauth2.client.business.GoogleDriveService#getFiles(java.lang.String, com.google.api.client.auth.oauth2.Credential)
+	 * @see com.idega.block.oauth2.client.business.YoutubeService#getChannels(java.lang.String, com.google.api.client.auth.oauth2.Credential)
 	 */
 	@Override
-	public Files getFiles(
+	public List<Channel> getChannels(
 			String applicationName, 
 			Credential credentials) {
-		Drive drive = getDrive(applicationName, credentials);
-		if (drive != null) {
-			return drive.files();
-		}
-
-		return null;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see com.idega.block.oauth2.client.business.GoogleDriveService#getFilesList(java.lang.String, com.google.api.client.auth.oauth2.Credential, java.lang.String)
-	 */
-	@Override
-	public FileList getFilesList(
-			String applicationName, 
-			Credential credentials, 
-			String query) {
-		
-		Files applicationService = getFiles(applicationName, credentials);
-		if (applicationService != null) {
+		YouTube service = getService(applicationName, credentials);
+		if (service != null) {
+			// Call the API's channels.list method to retrieve the
+            // resource that represents the authenticated user's channel.
+            // In the API response, only include channel information needed for
+            // this use case. The channel's contentDetails part contains
+            // playlist IDs relevant to the channel, including the ID for the
+            // list that contains videos uploaded to the channel.
+			YouTube.Channels.List channelRequest = null;
 			try {
-				if (!StringUtil.isEmpty(query)) {
-					return applicationService.list().setCorpus("DEFAULT").setQ(query).execute();
-				} else {
-					return applicationService.list().setCorpus("DEFAULT").execute();
+				channelRequest = service.channels().list("contentDetails");
+			} catch (IOException e) {
+				getLogger().log(Level.WARNING, 
+						"Failed to get channels list, cause of:", e);
+			}
+
+			channelRequest.setMine(true);
+	        channelRequest.setFields("items/contentDetails,nextPageToken,pageInfo");
+
+	        ChannelListResponse channelResult = null;
+			try {
+				channelResult = channelRequest.execute();
+			} catch (IOException e) {
+				getLogger().log(Level.WARNING, 
+						"Failed to get channel list cause of: ", e);
+			}
+
+	        if (channelResult != null) {
+	        	return channelResult.getItems();
+	        }
+		}
+
+		return Collections.emptyList();
+	}
+
+	@Override
+	public List<PlaylistItem> getUploads(
+			String applicationName, 
+			Credential credentials) {
+		// Define a list to store items in the list of uploaded videos.
+        List<PlaylistItem> playlistItemList = new ArrayList<PlaylistItem>();
+
+		List<Channel> personalChannels = getChannels(applicationName, credentials);
+		if (!ListUtil.isEmpty(personalChannels)) {
+			// The user's default channel is the first item in the list.
+	        // Extract the playlist ID for the channel's videos from the
+	        // API response.
+	        String uploadPlaylistId = personalChannels.get(0).getContentDetails()
+	        		.getRelatedPlaylists().getUploads();
+
+	        // Retrieve the playlist of the channel's uploaded videos.
+	        YouTube.PlaylistItems.List playlistRequest = null;
+			try {
+				playlistRequest = getService(applicationName, credentials).playlistItems().list("id,contentDetails,snippet");
+			} catch (IOException e) {
+				getLogger().log(Level.WARNING, "Failed to get playlist", e);
+			}
+
+	        playlistRequest.setPlaylistId(getApplicationProperty("youtube.playlist.id", "PLF2B7F053B7B480E1"));
+
+	        // Only retrieve data used in this application, thereby making
+	        // the application more efficient. See:
+	        // https://developers.google.com/youtube/v3/getting-started#partial
+	        playlistRequest.setFields(
+	                "items(contentDetails/videoId,snippet/title,snippet/publishedAt),nextPageToken,pageInfo");
+
+	        String nextToken = "";
+
+	        
+	        
+	        // Call the API one or more times to retrieve all items in the
+	        // list. As long as the API response returns a nextPageToken,
+	        // there are still more items to retrieve.
+	        do {
+	            playlistRequest.setPageToken(nextToken);
+	            PlaylistItemListResponse playlistResponse = null;
+				try {
+					playlistResponse = playlistRequest.execute();
+				} catch (IOException e) {
+					getLogger().log(Level.WARNING, "Failed to get playlist", e);
 				}
-			} catch (IOException e) {
-				getLogger().log(Level.WARNING, 
-						"Failed to get document by query: " + query + 
-						" cause of: ", e);
-			}
+
+	            playlistItemList.addAll(playlistResponse.getItems());
+
+	            nextToken = playlistResponse.getNextPageToken();
+	        } while (nextToken != null);
 		}
 
-		return null;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see com.idega.block.oauth2.client.business.GoogleDriveService#getFiles(java.lang.String, com.google.api.client.auth.oauth2.Credential, java.lang.String)
-	 */
-	@Override
-	public List<File> getFiles(
-			String applicationName, 
-			Credential credentials, 
-			String query) {
-		FileList list = getFilesList(applicationName, credentials, query);
-		if (list != null) {
-			return list.getItems();
-		}
-
-		return Collections.emptyList();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see com.idega.block.oauth2.client.business.GoogleDriveService#getConverted(java.util.List)
-	 */
-	@Override
-	public List<GoogleDriveObject> getConverted(List<File> files) {
-		ArrayList<GoogleDriveObject> convertedList = new ArrayList<GoogleDriveObject>();
-		
-		if (!ListUtil.isEmpty(files)) {
-			for (File file : files) {
-				convertedList.add(new GoogleDriveObject(file));
-			}
-		}
-
-		return convertedList;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see com.idega.block.oauth2.client.business.GoogleDriveService#getFiles(java.lang.String, java.lang.String, java.lang.String)
-	 */
-	@RemoteMethod
-	@Override
-	public List<GoogleDriveObject> getFiles(
-			String applicationName, 
-			String email, 
-			String query) {
-		Credential credential = getGoogleAuthorizationService().getCredential(email);
-		if (credential != null) {
-			return getConverted(getFiles(applicationName, credential, query));
-		} else {
-			getLogger().log(Level.WARNING, "Credentials not found by email: " + email);
-		}
-
-		return Collections.emptyList();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see com.idega.block.oauth2.client.business.GoogleDriveService#getDirectoryChildren(java.lang.String, java.lang.String, java.lang.String)
-	 */
-	@RemoteMethod
-	@Override
-	public List<GoogleDriveObject> getDirectoryChildren(
-			String applicationName, 
-			String email,
-			String parentId) {
-		StringBuilder query = new StringBuilder();
-		query.append("'").append(parentId).append("' in parents ")
-		.append("and trashed = false ")
-		.append("and hidden = false ");
-
-		return getFiles(applicationName, email, query.toString());
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see com.idega.block.oauth2.client.business.GoogleDriveService#getDriveInfo(com.google.api.services.drive.Drive)
-	 */
-	@Override
-	public About getDriveInfo(Drive drive) {
-		if (drive != null) {
-			try {
-				return drive.about().get().execute();
-			} catch (IOException e) {
-				getLogger().log(Level.WARNING, 
-						"Failed to get Google Drive info, cause of:", e);
-			}
-		}
-
-		return null;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see com.idega.block.oauth2.client.business.GoogleDriveService#getRootFolderId(com.google.api.services.drive.Drive)
-	 */
-	@Override
-	public String getRootFolderId(Drive drive) {
-		About about = getDriveInfo(drive);
-		if (about != null) {
-			return about.getRootFolderId();
-		}
-
-		return null;
+		return playlistItemList;
 	}
 }
