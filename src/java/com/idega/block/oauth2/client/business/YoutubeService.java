@@ -105,4 +105,16 @@ public interface YoutubeService {
 
 	List<PlaylistItem> getUploads(String applicationName, Credential credentials);
 
+	/**
+	 * 
+	 * <p>The user's default channel is the first item in the list. 
+	 * Extract the playlist ID for the channel's videos from the API response.</p>
+	 * @param applicationName of API application in Google account, 
+	 * not <code>null</code>
+	 * @param credentials
+	 * @return playlist id for getting uploads or <code>null</code> on failure;
+	 * @author <a href="mailto:martynas@idega.is">Martynas Stakė</a>
+	 */
+	String getUploadsPlaylistId(String applicationName, Credential credentials);
+
 }

@@ -215,6 +215,27 @@ public class YoutubeServiceImpl extends DefaultSpringBean implements
 		return Collections.emptyList();
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * @see com.idega.block.oauth2.client.business.YoutubeService#getUploadsPlaylistId(java.lang.String, com.google.api.client.auth.oauth2.Credential)
+	 */
+	@Override
+	public String getUploadsPlaylistId(
+			String applicationName, 
+			Credential credentials) {
+		List<Channel> personalChannels = getChannels(applicationName, credentials);
+		if (!ListUtil.isEmpty(personalChannels)) {
+			return personalChannels.iterator().next().getContentDetails()
+	        		.getRelatedPlaylists().getUploads();
+		}
+
+		return null;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.idega.block.oauth2.client.business.YoutubeService#getUploads(java.lang.String, com.google.api.client.auth.oauth2.Credential)
+	 */
 	@Override
 	public List<PlaylistItem> getUploads(
 			String applicationName, 
@@ -222,51 +243,41 @@ public class YoutubeServiceImpl extends DefaultSpringBean implements
 		// Define a list to store items in the list of uploaded videos.
         List<PlaylistItem> playlistItemList = new ArrayList<PlaylistItem>();
 
-		List<Channel> personalChannels = getChannels(applicationName, credentials);
-		if (!ListUtil.isEmpty(personalChannels)) {
-			// The user's default channel is the first item in the list.
-	        // Extract the playlist ID for the channel's videos from the
-	        // API response.
-	        String uploadPlaylistId = personalChannels.get(0).getContentDetails()
-	        		.getRelatedPlaylists().getUploads();
+        // Retrieve the playlist of the channel's uploaded videos.
+        YouTube.PlaylistItems.List playlistRequest = null;
+		try {
+			playlistRequest = getService(applicationName, credentials).playlistItems().list("id,contentDetails,snippet");
+		} catch (IOException e) {
+			getLogger().log(Level.WARNING, "Failed to get playlist", e);
+		}
 
-	        // Retrieve the playlist of the channel's uploaded videos.
-	        YouTube.PlaylistItems.List playlistRequest = null;
+        playlistRequest.setPlaylistId(getApplicationProperty(
+        		"youtube.playlist.ids", "PLbOPjwR6aLj-te5aF-dI_ZCJ1mgPvqF3N"));
+
+        // Only retrieve data used in this application, thereby making
+        // the application more efficient. See:
+        // https://developers.google.com/youtube/v3/getting-started#partial
+        playlistRequest.setFields(
+                "items(contentDetails/videoId,snippet),nextPageToken,pageInfo");
+
+        String nextToken = "";
+
+        // Call the API one or more times to retrieve all items in the
+        // list. As long as the API response returns a nextPageToken,
+        // there are still more items to retrieve.
+        do {
+            playlistRequest.setPageToken(nextToken);
+            PlaylistItemListResponse playlistResponse = null;
 			try {
-				playlistRequest = getService(applicationName, credentials).playlistItems().list("id,contentDetails,snippet");
+				playlistResponse = playlistRequest.execute();
 			} catch (IOException e) {
 				getLogger().log(Level.WARNING, "Failed to get playlist", e);
 			}
 
-	        playlistRequest.setPlaylistId(getApplicationProperty("youtube.playlist.ids", "PLbOPjwR6aLj-te5aF-dI_ZCJ1mgPvqF3N"));
+            playlistItemList.addAll(playlistResponse.getItems());
 
-	        // Only retrieve data used in this application, thereby making
-	        // the application more efficient. See:
-	        // https://developers.google.com/youtube/v3/getting-started#partial
-	        playlistRequest.setFields(
-	                "items(contentDetails/videoId,snippet),nextPageToken,pageInfo");
-
-	        String nextToken = "";
-
-	        
-	        
-	        // Call the API one or more times to retrieve all items in the
-	        // list. As long as the API response returns a nextPageToken,
-	        // there are still more items to retrieve.
-	        do {
-	            playlistRequest.setPageToken(nextToken);
-	            PlaylistItemListResponse playlistResponse = null;
-				try {
-					playlistResponse = playlistRequest.execute();
-				} catch (IOException e) {
-					getLogger().log(Level.WARNING, "Failed to get playlist", e);
-				}
-
-	            playlistItemList.addAll(playlistResponse.getItems());
-
-	            nextToken = playlistResponse.getNextPageToken();
-	        } while (nextToken != null);
-		}
+            nextToken = playlistResponse.getNextPageToken();
+        } while (nextToken != null);
 
 		return playlistItemList;
 	}

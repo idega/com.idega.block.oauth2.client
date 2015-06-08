@@ -207,9 +207,9 @@ public class GoogleDriveServiceImpl extends DefaultSpringBean implements
 		if (applicationService != null) {
 			try {
 				if (!StringUtil.isEmpty(query)) {
-					return applicationService.list().setCorpus("DEFAULT").setQ(query).execute();
+					return applicationService.list().setQ(query).execute();
 				} else {
-					return applicationService.list().setCorpus("DEFAULT").execute();
+					return applicationService.list().execute();
 				}
 			} catch (IOException e) {
 				getLogger().log(Level.WARNING, 
