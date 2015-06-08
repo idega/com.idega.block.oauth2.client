@@ -5,6 +5,7 @@ xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
 http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="2.5">
 
 	<servlet>
+		<display-name>OAuth Callback Servlet</display-name>
         <servlet-name>OAuth Callback Servlet</servlet-name>
         <servlet-class>com.idega.block.oauth2.client.servlet.OAuth2CallbackServlet</servlet-class>
         <load-on-startup>210</load-on-startup>
@@ -18,7 +19,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="2.5">
 
 	<servlet-mapping>
 	    <servlet-name>GoogleDriveDownloader</servlet-name>
-	    <url-pattern>/google-drive</url-pattern>
+	    <url-pattern>/google-drive/</url-pattern>
 	</servlet-mapping>
 
     <servlet-mapping>
