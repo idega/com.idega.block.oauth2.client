@@ -11,7 +11,7 @@
 	<description>OAuth 2 client for idega</description>
 
 	<properties>
-		<oltu.oauth2.version>1.0.0</oltu.oauth2.version>
+		<oltu.oauth2.version>1.0.0-SNAPSHOT</oltu.oauth2.version>
 	</properties>
 
 	<dependencies>
