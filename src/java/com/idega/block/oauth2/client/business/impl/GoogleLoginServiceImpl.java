@@ -116,7 +116,7 @@ import com.google.api.client.json.JsonParser;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.oauth2.Oauth2;
 import com.google.api.services.oauth2.model.Tokeninfo;
-import com.google.api.services.oauth2.model.Userinfoplus;
+import com.google.api.services.oauth2.model.Userinfo;
 import com.idega.block.oauth2.client.business.GoogleLoginService;
 import com.idega.block.oauth2.client.data.dao.OAuth2CredentialEntityDAO;
 import com.idega.core.business.DefaultSpringBean;
@@ -380,7 +380,7 @@ public class GoogleLoginServiceImpl extends DefaultSpringBean implements
 	  }
 
 	private static void userInfo(Oauth2 oauth2) throws IOException {
-		Userinfoplus userinfo = oauth2.userinfo().get().execute();
+		Userinfo userinfo = oauth2.userinfo().get().execute();
 		System.out.println(userinfo.toPrettyString());
 	}
 
